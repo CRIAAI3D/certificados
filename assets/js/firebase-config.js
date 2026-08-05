@@ -1,12 +1,12 @@
-// Cole aqui as configurações do Firebase do seu novo projeto.
-// Firebase Console > Configurações do projeto > Seus apps > Web app.
+// Configurações do Firebase do projeto cert-generator.
 window.firebaseConfig = {
-  apiKey: "COLE_AQUI",
-  authDomain: "COLE_AQUI.firebaseapp.com",
-  projectId: "COLE_AQUI",
-  storageBucket: "COLE_AQUI.firebasestorage.app",
-  messagingSenderId: "COLE_AQUI",
-  appId: "COLE_AQUI"
+  apiKey: "AIzaSyA766jV5IrQkrPdxNlpe5BCMPnmRZQztk",
+  authDomain: "cert-generator-3b9bb.firebaseapp.com",
+  projectId: "cert-generator-3b9bb",
+  storageBucket: "cert-generator-3b9bb.firebasestorage.app",
+  messagingSenderId: "1000455716885",
+  appId: "1:1000455716885:web:14f4df8d66f5f9c8cb4e1c",
+  measurementId: "G-4FWFNA8XX5"
 };
 
 // Nome público usado no validador e nos registros.
