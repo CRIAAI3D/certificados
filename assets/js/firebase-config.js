@@ -1,4 +1,3 @@
-// Configurações do Firebase do projeto cert-generator.
 window.firebaseConfig = {
   apiKey: "AIzaSyA766jV5IrQkrPdxNlpe5BCMPnmRZQztk",
   authDomain: "cert-generator-3b9bb.firebaseapp.com",
@@ -9,7 +8,6 @@ window.firebaseConfig = {
   measurementId: "G-4FWFNA8XX5"
 };
 
-// Nome público usado no validador e nos registros.
 window.extremoConfig = {
   sistemaNome: "Certificados Extremo",
   unidadePadrao: "Extremo Norte"
