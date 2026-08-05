@@ -730,6 +730,11 @@
 
     .fit-text { }
 
+
+    .app.hidden + .mobile-actions {
+      display: none !important;
+    }
+
     .mobile-actions { display: none; }
 
     @media (max-width: 1220px) {
@@ -2319,6 +2324,7 @@
     function initAuthButtons() {
       $("#emailLoginBtn").addEventListener("click", async () => {
         try {
+          if (!state.auth) return setAuthStatus("Firebase ainda está carregando. Aguarde alguns segundos e tente novamente.");
           setAuthStatus("Entrando...");
           await state.auth.signInWithEmailAndPassword($("#loginEmail").value.trim().toLowerCase(), $("#loginPassword").value);
         } catch (error) {
@@ -2329,6 +2335,7 @@
 
       $("#createAccountBtn").addEventListener("click", async () => {
         try {
+          if (!state.auth) return setAuthStatus("Firebase ainda está carregando. Aguarde alguns segundos e tente novamente.");
           setAuthStatus("Criando conta...");
           await state.auth.createUserWithEmailAndPassword($("#loginEmail").value.trim().toLowerCase(), $("#loginPassword").value);
         } catch (error) {
@@ -2339,6 +2346,7 @@
 
       $("#googleLoginBtn").addEventListener("click", async () => {
         try {
+          if (!state.auth) return setAuthStatus("Firebase ainda está carregando. Aguarde alguns segundos e tente novamente.");
           setAuthStatus("Abrindo login Google...");
           const provider = new firebase.auth.GoogleAuthProvider();
           await state.auth.signInWithPopup(provider);
@@ -2351,6 +2359,7 @@
       $("#resetPasswordBtn").addEventListener("click", async () => {
         const email = $("#loginEmail").value.trim().toLowerCase();
         if (!email) return setAuthStatus("Informe o e-mail para recuperar senha.");
+        if (!state.auth) return setAuthStatus("Firebase ainda está carregando. Aguarde alguns segundos e tente novamente.");
         await state.auth.sendPasswordResetEmail(email);
         setAuthStatus("E-mail de recuperação enviado, se a conta existir.");
       });
@@ -2402,17 +2411,19 @@
       initFirebase();
     }
 
-    try {
-      init();
-    } catch (error) {
-      console.error(error);
-      const auth = document.querySelector("#authScreen");
-      const app = document.querySelector("#appRoot");
-      const status = document.querySelector("#authStatus");
-      if (app) app.classList.add("hidden");
-      if (auth) auth.classList.remove("hidden");
-      if (status) status.textContent = "Falha ao carregar o sistema. Confira o console do navegador ou atualize com Ctrl + F5.";
-    }
+    window.addEventListener("load", () => {
+      try {
+        init();
+      } catch (error) {
+        console.error(error);
+        const auth = document.querySelector("#authScreen");
+        const app = document.querySelector("#appRoot");
+        const status = document.querySelector("#authStatus");
+        if (app) app.classList.add("hidden");
+        if (auth) auth.classList.remove("hidden");
+        if (status) status.textContent = "Falha ao carregar o sistema. Confira o console do navegador ou atualize com Ctrl + F5.";
+      }
+    });
   </script>
 </body>
 </html>
