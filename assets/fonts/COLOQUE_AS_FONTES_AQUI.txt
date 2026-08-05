@@ -1,0 +1,6 @@
+Coloque nesta pasta as fontes usadas pelo projeto, com estes nomes exatos:
+- Exo2-ExtraBoldItalic.ttf
+- Exo2-Regular.ttf
+- iglesia_.ttf
+
+Sem esses arquivos, o sistema abre com fontes alternativas do navegador.
