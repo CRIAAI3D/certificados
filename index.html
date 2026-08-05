@@ -1589,7 +1589,6 @@
 
     function formSnapshot() {
       syncProfessors();
-      updateMainLogo(root);
       return JSON.stringify({
         student: $("#student").value.trim(),
         beltKey: $("#belt").value,
@@ -1677,6 +1676,21 @@
       requestAnimationFrame(() => {
         $$(".fit-text", root).forEach(el => fitText(el, 17));
       });
+    }
+
+    function updateMainLogo(root = document) {
+      const select = $("#mainLogo");
+      const selected = select ? select.value : "logo1";
+      const logo = logoMap[selected] || logoMap.logo1;
+      const img = $("#mainLogoPreview", root);
+      if (!img) return;
+      img.src = logo.src;
+      img.alt = logo.alt;
+      const box = img.closest(".logo-center");
+      if (box) {
+        box.classList.toggle("logo-option-2", selected === "logo2");
+        box.classList.toggle("logo-option-3", selected === "logo3");
+      }
     }
 
     function renderBeltSvg(root, belt) {
@@ -1786,6 +1800,7 @@
 
     function updatePreview(root = document) {
       syncProfessors();
+      updateMainLogo(root);
       $("#studentPreview", root).textContent = upper($("#student").value, "NOME DO ATLETA");
 
       const belt = currentBelt();
@@ -2387,7 +2402,17 @@
       initFirebase();
     }
 
-    init();
+    try {
+      init();
+    } catch (error) {
+      console.error(error);
+      const auth = document.querySelector("#authScreen");
+      const app = document.querySelector("#appRoot");
+      const status = document.querySelector("#authStatus");
+      if (app) app.classList.add("hidden");
+      if (auth) auth.classList.remove("hidden");
+      if (status) status.textContent = "Falha ao carregar o sistema. Confira o console do navegador ou atualize com Ctrl + F5.";
+    }
   </script>
 </body>
 </html>
