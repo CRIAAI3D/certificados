@@ -1,0 +1,2393 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#111418" />
+  <title>Gerador de Certificados | Extremo Norte</title>
+  <link rel="icon" type="image/png" href="./assets/icons/favicon.png" />
+  <link rel="apple-touch-icon" href="./assets/icons/icon-192.png" />
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script defer src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+  <script defer src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
+  <script defer src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+  <script defer src="./assets/js/firebase-config.js"></script>
+
+  <style>
+    @font-face {
+      font-family: "Exo2Regular";
+      src: url("./assets/fonts/Exo2-Regular.ttf") format("truetype");
+      font-display: swap;
+    }
+
+    @font-face {
+      font-family: "Exo2ExtraBoldItalic";
+      src: url("./assets/fonts/Exo2-ExtraBoldItalic.ttf") format("truetype");
+      font-weight: 800;
+      font-style: italic;
+      font-display: swap;
+    }
+
+    @font-face {
+      font-family: "Iglesia";
+      src: url("./assets/fonts/iglesia_.ttf") format("truetype");
+      font-display: swap;
+    }
+
+    :root {
+      --dark: #101317;
+      --dark2: #171b20;
+      --orange: #ff6a00;
+      --orange2: #ff8a1c;
+      --yellow: #ffcc00;
+      --ink: #070809;
+      --paper: #fbfaf7;
+      --line: #d8dde5;
+      --muted: #6b7280;
+      --paper-w: 297mm;
+      --paper-h: 210mm;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      font-family: "Exo2Regular", Arial, sans-serif;
+      color: #111827;
+      background: #14171c;
+    }
+
+    body {
+      overflow-x: hidden;
+      background:
+        radial-gradient(circle at 7% 10%, rgba(255,255,255,.08), transparent 18%),
+        linear-gradient(135deg, #0a0c0f 0%, #1a1e24 48%, #0b0d10 100%);
+    }
+
+    .app {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 1fr;
+      grid-template-rows: 100px 1fr;
+      grid-template-areas:
+        "top"
+        "main";
+    }
+
+    .topbar {
+      grid-area: top;
+      height: 100px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 30px;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.055), rgba(255,255,255,.018)),
+        #12161b;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      box-shadow: 0 14px 34px rgba(0,0,0,.32);
+      position: relative;
+      z-index: 5;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      min-width: 0;
+    }
+
+    .brand-emblem {
+      width: 340px;
+      height: 58px;
+      object-fit: contain;
+      object-position: left center;
+      filter: drop-shadow(0 6px 10px rgba(0,0,0,.45));
+      flex: 0 0 auto;
+      max-width: min(42vw, 340px);
+    }
+
+    .brand-text {
+      display: none;
+      min-width: 0;
+    }
+
+    .brand-title {
+      margin: 0;
+      font-family: "Exo2ExtraBoldItalic", Arial, sans-serif;
+      font-size: 24px;
+      line-height: 1;
+      text-transform: uppercase;
+      color: #f7f7f7;
+      letter-spacing: .02em;
+      white-space: nowrap;
+    }
+
+    .brand-title span { color: var(--orange2); }
+
+    .brand-subtitle {
+      margin: 8px 0 0;
+      color: rgba(255,255,255,.72);
+      font-size: 13px;
+      letter-spacing: .045em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: stretch;
+      height: 100%;
+    }
+
+    .top-action {
+      appearance: none;
+      border: 0;
+      background: transparent;
+      color: #f3f4f6;
+      min-width: 178px;
+      padding: 0 30px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      font-family: "Exo2Regular", Arial, sans-serif;
+      font-weight: 800;
+      font-size: 15px;
+      cursor: pointer;
+      border-left: 1px solid rgba(255,255,255,.09);
+    }
+
+    .top-action:hover { background: rgba(255,255,255,.035); }
+    .top-action svg { width: 24px; height: 24px; }
+
+    .sidebar {
+      display: none !important;
+    }
+
+    .nav {
+      margin-top: 10px;
+    }
+
+    .nav-item {
+      height: 66px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 18px;
+      color: rgba(255,255,255,.72);
+      font-size: 14px;
+      border-left: 5px solid transparent;
+    }
+
+    .nav-item svg { width: 22px; height: 22px; flex: 0 0 auto; }
+
+    .nav-item.active {
+      color: var(--orange2);
+      background: linear-gradient(90deg, rgba(255,106,0,.18), rgba(255,106,0,.04));
+      border-left-color: var(--orange);
+      font-weight: 800;
+    }
+
+    .side-bottom {
+      text-align: center;
+      color: rgba(255,255,255,.86);
+      font-size: 11px;
+      text-transform: uppercase;
+      line-height: 1.25;
+      letter-spacing: .035em;
+      padding: 0 12px;
+    }
+
+    .side-bottom img {
+      width: 42px;
+      height: 42px;
+      object-fit: contain;
+      margin-bottom: 8px;
+      opacity: .9;
+    }
+
+    .main {
+      grid-area: main;
+      background: #f2f3f5;
+      padding: 24px 28px 28px 22px;
+      display: grid;
+      grid-template-columns: 350px minmax(0, 1fr);
+      gap: 28px;
+      min-width: 0;
+    }
+
+    .form-panel {
+      background: #ffffff;
+      border: 1px solid rgba(17, 24, 39, .08);
+      border-radius: 12px;
+      box-shadow: 0 13px 35px rgba(16, 24, 40, .11);
+      padding: 22px 18px 18px;
+      align-self: start;
+      max-height: calc(100vh - 150px);
+      overflow: auto;
+    }
+
+    .panel-heading {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .panel-icon {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      color: var(--orange);
+      background: #fff1e6;
+      border: 1px solid #ffd8b8;
+      flex: 0 0 auto;
+    }
+
+    .panel-icon svg { width: 21px; height: 21px; }
+
+    .panel-title {
+      margin: 0;
+      font-size: 19px;
+      line-height: 1;
+      font-weight: 800;
+      letter-spacing: -.01em;
+      color: #121820;
+    }
+
+    .field {
+      margin-bottom: 16px;
+    }
+
+    .field label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 13px;
+      line-height: 1.1;
+      font-weight: 800;
+      color: #212936;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      min-height: 38px;
+      border: 1px solid #cfd6df;
+      border-radius: 6px;
+      background: #fff;
+      color: #1f2937;
+      outline: none;
+      font-family: "Exo2Regular", Arial, sans-serif;
+      font-size: 13px;
+      padding: 9px 12px;
+      box-shadow: inset 0 1px 2px rgba(16,24,40,.04);
+    }
+
+    input:focus, select:focus, textarea:focus {
+      border-color: rgba(255,106,0,.65);
+      box-shadow: 0 0 0 3px rgba(255,106,0,.10);
+    }
+
+    textarea {
+      min-height: 74px;
+      resize: vertical;
+    }
+
+    .professor-section {
+      margin-top: 24px;
+      padding-top: 18px;
+      border-top: 1px solid #e4e7ec;
+    }
+
+    .section-head {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .section-head svg {
+      width: 28px;
+      height: 28px;
+      padding: 5px;
+      color: var(--orange);
+      border-radius: 50%;
+      background: #fff3e9;
+    }
+
+    .section-head h2 {
+      margin: 0;
+      font-size: 16px;
+      color: #111827;
+      line-height: 1;
+      font-weight: 800;
+    }
+
+    .prof-card {
+      padding: 12px;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      background: #fcfcfd;
+      margin-bottom: 12px;
+    }
+
+    .prof-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      font-size: 12px;
+      font-weight: 800;
+      color: #374151;
+    }
+
+    .remove-prof {
+      border: 0;
+      background: transparent;
+      color: #8b95a1;
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 6px;
+      display: grid;
+      place-items: center;
+    }
+
+    .remove-prof:hover {
+      color: #d92d20;
+      background: #fff0f0;
+    }
+
+    .remove-prof svg { width: 17px; height: 17px; }
+
+    .add-prof {
+      width: 100%;
+      min-height: 38px;
+      border: 1px dashed #c9d1dc;
+      border-radius: 7px;
+      background: #fff;
+      color: #222b38;
+      font-family: "Exo2Regular", Arial, sans-serif;
+      font-size: 13px;
+      font-weight: 800;
+      cursor: pointer;
+      margin: 2px 0 16px;
+    }
+
+    .add-prof:hover {
+      border-color: var(--orange);
+      color: var(--orange);
+      background: #fff7f0;
+    }
+
+    .actions {
+      display: grid;
+      grid-template-columns: 1fr 1.15fr;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .btn {
+      min-height: 44px;
+      border-radius: 7px;
+      border: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      font-family: "Exo2Regular", Arial, sans-serif;
+      font-size: 14px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .btn svg { width: 19px; height: 19px; }
+
+    .btn-light {
+      background: #fff;
+      border: 1px solid #cfd6df;
+      color: #101828;
+    }
+
+    .btn-orange {
+      color: #fff;
+      background: #ff6a00;
+      box-shadow: 0 8px 18px rgba(255, 106, 0, .22);
+    }
+
+    .hint {
+      margin-top: 18px;
+      background: #fff3e8;
+      color: #6d7280;
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 11px;
+      line-height: 1.35;
+      display: flex;
+      gap: 8px;
+    }
+
+    .hint svg {
+      width: 15px;
+      height: 15px;
+      color: var(--orange);
+      flex: 0 0 auto;
+      margin-top: 1px;
+    }
+
+    .status {
+      min-height: 16px;
+      margin-top: 10px;
+      font-size: 12px;
+      color: #555f6f;
+    }
+
+    .preview-area {
+      min-width: 0;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+    }
+
+    .certificate-shell {
+      width: 100%;
+      padding: 7px;
+      background: #fff;
+      border: 1px solid rgba(16,24,40,.12);
+      border-radius: 8px;
+      box-shadow: 0 12px 30px rgba(16,24,40,.17);
+    }
+
+    .certificate {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1122 / 794;
+      background: var(--paper);
+      overflow: hidden;
+      border-radius: 4px;
+      color: var(--ink);
+      font-family: "Exo2Regular", Arial, sans-serif;
+      container-type: inline-size;
+      isolation: isolate;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    /* FUNDO do certificado com a imagem enviada, em 10% de transparência */
+    .certificate::before,
+    .certificate::after {
+      display: none !important;
+      content: none !important;
+      background: none !important;
+    }
+
+    .texture,
+    .compass,
+    .left-arc {
+      display: none !important;
+    }
+
+    .windrose-bg {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+      opacity: .10;
+      background: url("./assets/backgrounds/certificate-bg.png") center / cover no-repeat;
+    }
+
+    .windrose-bg::before,
+    .windrose-bg::after {
+      content: none !important;
+      display: none !important;
+    }
+
+
+    .cert-content {
+      position: relative;
+      z-index: 4;
+      height: 100%;
+    }
+
+    .cert-logo {
+      position: absolute;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .cert-logo img {
+      display: block;
+      width: 100%;
+      height: auto;
+      object-fit: contain;
+      filter: drop-shadow(0 .2cqw .35cqw rgba(0,0,0,.08));
+    }
+
+    .logo-ibjjf { top: 7.2%; left: 5.3%; width: 9.2%; }
+    .logo-cbjj { top: 7.3%; right: 5.2%; width: 8.35%; }
+    .logo-center { top: 2.3%; left: 50%; transform: translateX(-50%); width: 20.3%; }
+    .logo-center.logo-option-2 { top: 3.0%; width: 28.2%; }
+    .logo-center.logo-option-3 { top: 2.9%; width: 29.4%; }
+
+    .cert-title {
+      position: absolute;
+      top: 25.7%;
+      left: 0;
+      width: 100%;
+      text-align: center;
+      font-family: "Iglesia", Georgia, serif;
+      font-size: 8.85cqw;
+      line-height: .78;
+      letter-spacing: .008em;
+      color: #050505;
+      text-transform: none;
+      text-shadow: 0 .14cqw .16cqw rgba(0,0,0,.08);
+    }
+
+    .intro {
+      position: absolute;
+      top: 43.3%;
+      left: 7%;
+      width: 86%;
+      text-align: center;
+      font-size: 2.03cqw;
+      line-height: 1;
+      color: #0c0c0d;
+    }
+
+    .intro strong { font-weight: 900; }
+
+    .student-name {
+      position: absolute;
+      top: 49.1%;
+      left: 0;
+      width: 100%;
+      padding: 0 7%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      font-family: "Exo2ExtraBoldItalic", Impact, "Arial Black", sans-serif !important;
+      font-size: 3.92cqw;
+      line-height: .96;
+      letter-spacing: .019em;
+      text-transform: uppercase;
+      white-space: nowrap;
+      transform: skewX(-3deg);
+      color: #050506;
+    }
+
+    .orange-rule {
+      position: absolute;
+      top: 56.4%;
+      left: 39%;
+      width: 22%;
+      height: .18cqw;
+      background: linear-gradient(90deg, transparent, #ff6a00, transparent);
+    }
+
+    .orange-rule::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: .82cqw;
+      height: .82cqw;
+      background: #ff6a00;
+      transform: translate(-50%, -50%) rotate(45deg);
+    }
+
+    .subtitle {
+      position: absolute;
+      top: 58.4%;
+      left: 0;
+      width: 100%;
+      text-align: center;
+      font-size: 1.92cqw;
+      line-height: 1;
+      color: #0d0d0e;
+    }
+
+    .belt {
+      position: absolute;
+      left: 6.1%;
+      right: 6.1%;
+      top: 63.0%;
+      height: 8.0%;
+      display: block;
+      overflow: hidden;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    .belt-svg {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      overflow: visible;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    .belt-name {
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      font-family: "Exo2ExtraBoldItalic", Impact, "Arial Black", sans-serif !important;
+      font-size: 4.05cqw;
+      line-height: .86;
+      letter-spacing: .02em;
+      text-transform: uppercase;
+      white-space: nowrap;
+      transform: skewX(-5deg);
+      color: var(--belt-text, #070707);
+      padding-top: .08em;
+      pointer-events: none;
+    }
+
+    .reason {
+      position: absolute;
+      top: 72.2%;
+      left: 0;
+      width: 100%;
+      text-align: center;
+      font-size: 1.31cqw;
+      line-height: 1;
+    }
+
+    .date {
+      position: absolute;
+      top: 77.8%;
+      left: 0;
+      width: 100%;
+      text-align: center;
+      font-family: "Exo2Regular", Arial, sans-serif !important;
+      font-weight: 400 !important;
+      font-style: normal !important;
+      font-size: 1.25cqw;
+      line-height: 1;
+    }
+
+    .signatures {
+      position: absolute;
+      left: 10%;
+      right: 10%;
+      bottom: 5.5%;
+      display: flex;
+      justify-content: center;
+      gap: 4.5%;
+      align-items: flex-start;
+    }
+
+    .signatures.count-1 .signature { width: 34%; }
+    .signatures.count-2 .signature { width: 32%; }
+    .signatures.count-3 .signature { width: 27%; }
+    .signatures.count-4 .signature { width: 23%; }
+    .signatures.count-many { left: 6%; right: 6%; gap: 2%; bottom: 4.6%; }
+    .signatures.count-many .signature { width: 19%; }
+
+    .signature {
+      min-width: 0;
+      text-align: center;
+    }
+
+    .signature-space {
+      height: 3.0cqw;
+      margin-bottom: -.08cqw;
+    }
+
+    .signature-line {
+      border-top: .12cqw solid rgba(0,0,0,.82);
+      margin-bottom: .48cqw;
+    }
+
+    .signature-name {
+      font-family: "Exo2ExtraBoldItalic", Impact, "Arial Black", sans-serif;
+      font-size: 1.03cqw;
+      line-height: .98;
+      text-transform: uppercase;
+    }
+
+    .signature-role {
+      margin-top: .15cqw;
+      font-family: "Exo2Regular", Arial, sans-serif;
+      font-size: .96cqw;
+      line-height: 1.05;
+    }
+
+    .fit-text { }
+
+    .mobile-actions { display: none; }
+
+    @media (max-width: 1220px) {
+      .main {
+        grid-template-columns: 330px minmax(0, 1fr);
+        gap: 20px;
+        padding: 18px;
+      }
+
+      .top-action {
+        min-width: 150px;
+        padding: 0 20px;
+      }
+    }
+
+    @media (max-width: 980px) {
+      .app {
+        display: block;
+      }
+
+      .sidebar {
+        display: none;
+      }
+
+      .topbar {
+        position: sticky;
+        top: 0;
+        height: 76px;
+        padding: 0 14px;
+      }
+
+      .brand-emblem {
+        width: 210px;
+        height: 42px;
+        max-width: 56vw;
+      }
+
+      .brand-title {
+        font-size: 17px;
+      }
+
+      .brand-subtitle {
+        font-size: 10px;
+        margin-top: 4px;
+      }
+
+      .top-actions .top-action:first-child {
+        display: none;
+      }
+
+      .top-action {
+        min-width: auto;
+        padding: 0 12px;
+        font-size: 12px;
+        border-left: 0;
+      }
+
+      .top-action svg {
+        width: 19px;
+        height: 19px;
+      }
+
+      .main {
+        display: block;
+        padding: 14px;
+      }
+
+      .form-panel {
+        max-height: none;
+        margin-bottom: 14px;
+      }
+
+      .certificate-shell {
+        overflow-x: auto;
+      }
+
+      .certificate {
+        min-width: 720px;
+      }
+
+      .mobile-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        position: sticky;
+        bottom: 0;
+        z-index: 20;
+        padding: 10px 14px 14px;
+        background: rgba(255,255,255,.92);
+        backdrop-filter: blur(14px);
+        border-top: 1px solid #e5e7eb;
+      }
+    }
+
+    @media (max-width: 520px) {
+      .brand-subtitle { display: none; }
+      .brand-title { font-size: 15px; }
+      .brand-emblem { width: 170px; height: 36px; max-width: 48vw; }
+      .top-action span { display: none; }
+      .top-action { min-width: 44px; }
+      .panel-heading { margin-bottom: 18px; }
+      .panel-title { font-size: 17px; }
+      .actions { grid-template-columns: 1fr; }
+      .certificate { min-width: 660px; }
+    }
+
+
+    .hidden { display: none !important; }
+
+    .auth-screen,
+    .validation-screen {
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 28px;
+      background:
+        radial-gradient(circle at 8% 12%, rgba(255,106,0,.22), transparent 24%),
+        linear-gradient(135deg, #0a0c0f 0%, #171b20 54%, #07080a 100%);
+    }
+
+    .auth-card,
+    .validation-card {
+      width: min(520px, 100%);
+      background: rgba(255,255,255,.96);
+      border-radius: 24px;
+      padding: 26px;
+      box-shadow: 0 24px 60px rgba(0,0,0,.38);
+      border: 1px solid rgba(255,255,255,.45);
+    }
+
+    .auth-logo {
+      display: block;
+      max-width: 330px;
+      width: 100%;
+      height: auto;
+      margin: 0 auto 20px;
+      background: #111418;
+      border-radius: 14px;
+      padding: 10px 14px;
+    }
+
+    .auth-card h1,
+    .validation-card h1 {
+      margin: 0 0 8px;
+      font-family: "Exo2ExtraBoldItalic", Arial, sans-serif;
+      font-size: 25px;
+      line-height: 1.05;
+      color: #111827;
+    }
+
+    .auth-card p,
+    .validation-card p {
+      margin: 0 0 18px;
+      color: #4b5563;
+      line-height: 1.45;
+    }
+
+    .auth-grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    .auth-grid label {
+      display: block;
+      font-size: 13px;
+      font-weight: 800;
+      color: #374151;
+      margin-bottom: 6px;
+    }
+
+    .auth-grid input,
+    .auth-grid select {
+      width: 100%;
+      height: 46px;
+      border-radius: 12px;
+      border: 1px solid #d1d5db;
+      padding: 0 13px;
+      font: inherit;
+      background: #fff;
+    }
+
+    .auth-buttons {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .auth-buttons .btn,
+    .mini-btn {
+      min-height: 42px;
+      border: 0;
+      border-radius: 12px;
+      padding: 0 13px;
+      cursor: pointer;
+      font-family: "Exo2Regular", Arial, sans-serif;
+      font-weight: 900;
+    }
+
+    .mini-btn {
+      background: #111827;
+      color: #fff;
+      min-height: 36px;
+    }
+
+    .mini-btn.secondary {
+      background: #e5e7eb;
+      color: #111827;
+    }
+
+    .auth-status,
+    .firebase-status {
+      margin-top: 12px;
+      min-height: 20px;
+      color: #6b7280;
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .user-box {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: #f9fafb;
+      padding-left: 18px;
+      border-left: 1px solid rgba(255,255,255,.1);
+      min-width: 180px;
+      justify-content: flex-end;
+    }
+
+    .user-box small {
+      display: block;
+      color: rgba(255,255,255,.68);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+
+    .user-box strong {
+      display: block;
+      max-width: 220px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 13px;
+    }
+
+    .logout-btn {
+      border: 1px solid rgba(255,255,255,.22);
+      color: #fff;
+      background: rgba(255,255,255,.06);
+      border-radius: 10px;
+      padding: 9px 11px;
+      cursor: pointer;
+      font: inherit;
+      font-weight: 800;
+    }
+
+    .workflow-panel {
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid #e5e7eb;
+      display: grid;
+      gap: 18px;
+    }
+
+    .workflow-box {
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 18px;
+      padding: 16px;
+    }
+
+    .workflow-box h2 {
+      margin: 0 0 12px;
+      font-family: "Exo2ExtraBoldItalic", Arial, sans-serif;
+      font-size: 18px;
+      color: #111827;
+    }
+
+    .workflow-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .workflow-item {
+      border: 1px solid #e5e7eb;
+      background: #fff;
+      border-radius: 14px;
+      padding: 12px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .workflow-item strong { color: #111827; }
+    .workflow-item small { color: #6b7280; line-height: 1.35; }
+
+    .workflow-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .auth-stamp {
+      position: absolute;
+      right: 4.8%;
+      bottom: 3.6%;
+      display: flex;
+      align-items: center;
+      gap: .62cqw;
+      color: rgba(0,0,0,.55);
+      font-family: "Exo2Regular", Arial, sans-serif;
+      font-size: .95cqw;
+      line-height: 1.05;
+      text-align: right;
+      z-index: 6;
+    }
+
+    .qr-code-box {
+      width: 4.7cqw;
+      height: 4.7cqw;
+      display: grid;
+      place-items: center;
+      opacity: .88;
+    }
+
+    .qr-code-box img,
+    .qr-code-box canvas {
+      width: 100% !important;
+      height: 100% !important;
+      display: block;
+    }
+
+    .auth-code-preview {
+      max-width: 14cqw;
+      white-space: nowrap;
+    }
+
+    .approval-watermark {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%) rotate(-18deg);
+      border: .28cqw solid rgba(220,38,38,.22);
+      color: rgba(220,38,38,.22);
+      padding: .8cqw 1.3cqw;
+      border-radius: .6cqw;
+      font-family: "Exo2ExtraBoldItalic", Arial, sans-serif;
+      font-size: 4.6cqw;
+      line-height: 1;
+      text-transform: uppercase;
+      pointer-events: none;
+      z-index: 5;
+      display: none;
+    }
+
+    .certificate.pending .approval-watermark { display: block; }
+
+    .validation-result {
+      border-radius: 16px;
+      padding: 16px;
+      border: 1px solid #e5e7eb;
+      background: #f9fafb;
+    }
+
+    .validation-result.valid {
+      border-color: rgba(22,163,74,.35);
+      background: rgba(22,163,74,.07);
+    }
+
+    .validation-result.invalid {
+      border-color: rgba(220,38,38,.35);
+      background: rgba(220,38,38,.07);
+    }
+
+    .validation-result dl {
+      margin: 12px 0 0;
+      display: grid;
+      gap: 8px;
+    }
+
+    .validation-result div {
+      display: grid;
+      grid-template-columns: 130px 1fr;
+      gap: 12px;
+      align-items: baseline;
+    }
+
+    .validation-result dt {
+      font-weight: 900;
+      color: #374151;
+    }
+
+    .validation-result dd {
+      margin: 0;
+      color: #111827;
+    }
+
+    .admin-form {
+      display: grid;
+      gap: 10px;
+    }
+
+    .admin-form .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .admin-form input,
+    .admin-form select {
+      height: 42px;
+      border-radius: 10px;
+      border: 1px solid #d1d5db;
+      padding: 0 11px;
+      font: inherit;
+      background: #fff;
+    }
+
+    @media print {
+      @page { size: A4 landscape; margin: 0; }
+
+      * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+
+      html, body {
+        width: var(--paper-w);
+        height: var(--paper-h);
+        margin: 0;
+        background: #fff !important;
+      }
+
+      .topbar,
+      .sidebar,
+      .form-panel,
+      .mobile-actions {
+        display: none !important;
+      }
+
+      .app,
+      .main,
+      .preview-area,
+      .certificate-shell {
+        display: block !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        width: var(--paper-w) !important;
+        height: var(--paper-h) !important;
+        min-height: 0 !important;
+        border: 0 !important;
+        box-shadow: none !important;
+        background: #fff !important;
+      }
+
+      .certificate {
+        width: var(--paper-w) !important;
+        height: var(--paper-h) !important;
+        min-width: 0 !important;
+        aspect-ratio: auto !important;
+        border-radius: 0 !important;
+        page-break-after: always;
+      }
+
+      .belt-svg,
+      .belt-svg * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <section class="auth-screen hidden" id="authScreen">
+    <div class="auth-card">
+      <img class="auth-logo" src="./assets/logos/extremo-brazilian-jiu-jitsu.png" alt="Extremo Brazilian Jiu-Jitsu" />
+      <h1>Acesso dos professores</h1>
+      <p>Entre com e-mail e senha cadastrados. O acesso só será liberado se o e-mail estiver autorizado no Firestore.</p>
+      <div class="auth-grid">
+        <div>
+          <label for="loginEmail">E-mail</label>
+          <input id="loginEmail" type="email" autocomplete="email" placeholder="professor@email.com" />
+        </div>
+        <div>
+          <label for="loginPassword">Senha</label>
+          <input id="loginPassword" type="password" autocomplete="current-password" placeholder="Senha" />
+        </div>
+        <div class="auth-buttons">
+          <button class="btn btn-orange" type="button" id="emailLoginBtn">Entrar</button>
+          <button class="btn btn-light" type="button" id="createAccountBtn">Criar conta</button>
+        </div>
+        <div class="auth-buttons">
+          <button class="btn btn-light" type="button" id="googleLoginBtn">Entrar com Google</button>
+          <button class="btn btn-light" type="button" id="resetPasswordBtn">Recuperar senha</button>
+        </div>
+        <div class="auth-status" id="authStatus"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="validation-screen hidden" id="validationScreen">
+    <div class="validation-card">
+      <img class="auth-logo" src="./assets/logos/extremo-brazilian-jiu-jitsu.png" alt="Extremo Brazilian Jiu-Jitsu" />
+      <h1>Validação de certificado</h1>
+      <p>Consulta pública pelo código de autenticação ou QR Code.</p>
+      <div class="validation-result" id="validationResult">Consultando certificado...</div>
+    </div>
+  </section>
+
+  <div class="app hidden" id="appRoot">
+    <header class="topbar">
+      <div class="brand">
+        <img class="brand-emblem" src="./assets/logos/extremo-brazilian-jiu-jitsu.png" alt="Extremo Brazilian Jiu-Jitsu" />
+        <div class="brand-text">
+          <p class="brand-title">Extremo <span>Norte</span></p>
+          <p class="brand-subtitle">Gerador de Certificados de Jiu-Jitsu</p>
+        </div>
+      </div>
+
+      <div class="top-actions">
+        <button class="top-action" type="button" data-preview>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+          <span>Pré-visualizar</span>
+        </button>
+        <button class="top-action" type="button" data-pdf>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>
+          <span id="pdfButtonText">Gerar PDF</span>
+        </button>
+      </div>
+      <div class="user-box">
+        <div>
+          <small id="userRoleLabel">Usuário</small>
+          <strong id="userNameLabel">---</strong>
+        </div>
+        <button class="logout-btn" type="button" id="logoutBtn">Sair</button>
+      </div>
+    </header>
+
+    <aside class="sidebar">
+      <nav class="nav">
+        <div class="nav-item active">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
+          <span>Certificados</span>
+        </div>
+        <div class="nav-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v6l4 2"/></svg>
+          <span>Histórico</span>
+        </div>
+        <div class="nav-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5z"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.05.05a2 2 0 1 1-2.83 2.83l-.05-.05A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6l-.1.1a2 2 0 0 1-3.8 0L10 20a1.7 1.7 0 0 0-1-.6 1.7 1.7 0 0 0-1.88.34l-.05.05a2 2 0 1 1-2.83-2.83l.05-.05A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1l-.1-.1a2 2 0 0 1 0-3.8L4 10a1.7 1.7 0 0 0 .6-1 1.7 1.7 0 0 0-.34-1.88l-.05-.05a2 2 0 1 1 2.83-2.83l.05.05A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6l.1-.1a2 2 0 0 1 3.8 0l.1.1a1.7 1.7 0 0 0 1 .6 1.7 1.7 0 0 0 1.88-.34l.05-.05a2 2 0 1 1 2.83 2.83l-.05.05A1.7 1.7 0 0 0 19.4 9c.1.35.3.7.6 1l.1.1a2 2 0 0 1 0 3.8l-.1.1a1.7 1.7 0 0 0-.6 1z"/></svg>
+          <span>Configurações</span>
+        </div>
+        <div class="nav-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 10v7"/><path d="M12 7h.01"/></svg>
+          <span>Sobre</span>
+        </div>
+      </nav>
+
+      <div class="side-bottom">
+        <img src="./assets/icons/favicon.png" alt="Extremo Norte" />
+        <div>Associação<br>Extremo Norte<br>de Lutas</div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <section class="form-panel">
+        <div class="panel-heading">
+          <span class="panel-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 3h7l3 3v15H7z"/><path d="M14 3v4h4"/><path d="M9 12h6"/><path d="M9 16h6"/></svg>
+          </span>
+          <h1 class="panel-title">Dados do Certificado</h1>
+        </div>
+
+        <div class="field">
+          <label for="student">Nome do(a) atleta</label>
+          <input id="student" type="text" value="João Victor Freitas Figueiredo" autocomplete="off" />
+        </div>
+
+        <div class="field">
+          <label for="belt">Faixa / Graduação</label>
+          <select id="belt">
+            
+            <option value="cinza-branca">Faixa Cinza e Branca</option>
+            <option value="cinza">Faixa Cinza</option>
+            <option value="cinza-preta">Faixa Cinza e Preta</option>
+            <option value="amarela-branca">Faixa Amarela e Branca</option>
+            <option value="amarela" selected>Faixa Amarela</option>
+            <option value="amarela-preta">Faixa Amarela e Preta</option>
+            <option value="laranja-branca">Faixa Laranja e Branca</option>
+            <option value="laranja">Faixa Laranja</option>
+            <option value="laranja-preta">Faixa Laranja e Preta</option>
+            <option value="verde-branca">Faixa Verde e Branca</option>
+            <option value="verde">Faixa Verde</option>
+            <option value="verde-preta">Faixa Verde e Preta</option>
+            <option value="azul">Faixa Azul</option>
+            <option value="roxa">Faixa Roxa</option>
+            <option value="marrom">Faixa Marrom</option>
+            <option value="preta">Faixa Preta</option>
+            <option value="preta-1-grau">Faixa Preta 1º Grau</option>
+            <option value="preta-2-grau">Faixa Preta 2º Grau</option>
+            <option value="preta-3-grau">Faixa Preta 3º Grau</option>
+            <option value="preta-4-grau">Faixa Preta 4º Grau</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="mainLogo">Logo principal do certificado</label>
+          <select id="mainLogo">
+            <option value="logo1" selected>Logo 1 — Associação Extremo Norte de Lutas</option>
+            <option value="logo2">Logo 2 — Extremo Brazilian Jiu-Jitsu (frase laranja)</option>
+            <option value="logo3">Logo 3 — Extremo Brazilian Jiu-Jitsu (nova)</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="date">Data da certificação</label>
+          <input id="date" type="date" value="2023-07-07" />
+        </div>
+
+        <div class="professor-section">
+          <div class="section-head">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="7" r="4"/><path d="M5 21c1.4-4 3.8-6 7-6s5.6 2 7 6"/></svg>
+            <h2>Professor responsável</h2>
+          </div>
+
+          <div id="professorList"></div>
+          <button class="add-prof" type="button" id="addProfessor">+ Adicionar professor / assinatura</button>
+        </div>
+
+        <div class="field">
+          <label for="notes">Observações (opcional)</label>
+          <textarea id="notes" placeholder="Adicione observações ou informações complementares, se necessário."></textarea>
+        </div>
+
+        <div class="actions">
+          <button class="btn btn-light" type="button" data-preview>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+            Visualizar
+          </button>
+          <button class="btn btn-orange" type="button" data-pdf>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>
+            Gerar PDF
+          </button>
+        </div>
+
+        <div class="hint">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 10v7"/><path d="M12 7h.01"/></svg>
+          <span>Dica: Preencha os campos ao lado e clique em “Visualizar” para ver o certificado atualizado em tempo real.</span>
+        </div>
+
+        <div class="status" id="status"></div>
+
+        <div class="workflow-panel" id="workflowPanel">
+          <div class="workflow-box" id="historyPanel">
+            <h2>Histórico de certificados</h2>
+            <div class="workflow-list" id="historyList">Carregando histórico...</div>
+          </div>
+
+          <div class="workflow-box hidden" id="pendingPanel">
+            <h2>Aprovações pendentes - Faixa Preta</h2>
+            <div class="workflow-list" id="pendingList">Nenhuma solicitação carregada.</div>
+          </div>
+
+          <div class="workflow-box hidden" id="adminPanel">
+            <h2>Cadastrar / autorizar professor</h2>
+            <div class="admin-form">
+              <input id="adminUserEmail" type="email" placeholder="E-mail autorizado" />
+              <input id="adminUserName" type="text" placeholder="Nome do professor" />
+              <input id="adminUserUnit" type="text" placeholder="Unidade / polo" />
+              <div class="grid-2">
+                <select id="adminUserRole">
+                  <option value="professor">Professor</option>
+                  <option value="lider">Líder</option>
+                  <option value="admin">Admin</option>
+                </select>
+                <button class="mini-btn" type="button" id="saveUserProfileBtn">Salvar acesso</button>
+              </div>
+              <div class="firebase-status" id="adminStatus"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="preview-area" id="previewArea">
+        <div class="certificate-shell">
+          <article class="certificate" id="certificate">
+            <div class="texture"></div>
+            <div class="compass"></div>
+            <div class="left-arc"></div>
+            <div class="windrose-bg"></div>
+
+            <div class="cert-content">
+              <div class="cert-logo logo-ibjjf"><img src="./assets/logos/ibjjf.png" alt="IBJJF"></div>
+              <div class="cert-logo logo-center"><img id="mainLogoPreview" src="./assets/logos/extremo-norte-central.png" alt="Logo principal"></div>
+              <div class="cert-logo logo-cbjj"><img src="./assets/logos/cbjj.png" alt="CBJJ"></div>
+
+              <div class="cert-title">Certificado</div>
+              <div class="intro">A <strong>ASSOCIAÇÃO EXTREMO NORTE DE LUTAS</strong>, confere a</div>
+              <div class="student-name fit-text" id="studentPreview">JOÃO VICTOR FREITAS FIGUEIREDO</div>
+              <div class="orange-rule"></div>
+              <div class="subtitle">o título de</div>
+
+              <div class="belt" id="beltBox">
+                <svg class="belt-svg" id="beltSvg" viewBox="0 0 1000 80" preserveAspectRatio="none" aria-hidden="true"></svg>
+                <div class="belt-name fit-text" id="beltPreview">FAIXA AMARELA</div>
+              </div>
+
+              <div class="reason">por mérito e reconhecimento.</div>
+              <div class="date" id="datePreview">7 de Julho de 2023.</div>
+              <div class="approval-watermark" id="approvalWatermark">Aguardando aprovação</div>
+              <div class="auth-stamp hidden" id="authStamp">
+                <div class="auth-code-preview" id="authCodePreview"></div>
+                <div class="qr-code-box" id="qrCodeBox"></div>
+              </div>
+
+              <div class="signatures count-1" id="signaturePreview"></div>
+            </div>
+          </article>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="mobile-actions">
+    <button class="btn btn-light" type="button" data-preview>Visualizar</button>
+    <button class="btn btn-orange" type="button" data-pdf>Gerar PDF</button>
+  </div>
+
+  <script>
+    const $ = (selector, root = document) => root.querySelector(selector);
+    const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
+
+    const state = {
+      professors: [
+        { name: "Julyandre Paes de Souza", role: "Faixa Preta 2º Grau - CBJJ" }
+      ],
+      firebaseReady: false,
+      auth: null,
+      db: null,
+      user: null,
+      profile: null,
+      activeCertificate: null,
+      lastSnapshot: ""
+    };
+
+    const logoMap = {
+      logo1: {
+        src: "./assets/logos/extremo-norte-central.png",
+        alt: "Associação Extremo Norte de Lutas"
+      },
+      logo2: {
+        src: "./assets/logos/extremo-logo-2-light.png",
+        alt: "Extremo Brazilian Jiu-Jitsu"
+      },
+      logo3: {
+        src: "./assets/logos/extremo-logo-3.png",
+        alt: "Extremo Brazilian Jiu-Jitsu"
+      }
+    };
+
+    const beltMap = {
+      "cinza-branca": { label: "FAIXA CINZA E BRANCA", type: "dual", base: "#9ca3af", stripe: "#ffffff", text: "#070707" },
+      "cinza": { label: "FAIXA CINZA", type: "single", main: "#9ca3af", text: "#070707" },
+      "cinza-preta": { label: "FAIXA CINZA E PRETA", type: "dual", base: "#9ca3af", stripe: "#050505", text: "#ffffff" },
+      "amarela-branca": { label: "FAIXA AMARELA E BRANCA", type: "dual", base: "#ffcc00", stripe: "#ffffff", text: "#070707" },
+      "amarela": { label: "FAIXA AMARELA", type: "single", main: "#ffcc00", text: "#070707" },
+      "amarela-preta": { label: "FAIXA AMARELA E PRETA", type: "dual", base: "#ffcc00", stripe: "#050505", text: "#ffffff" },
+      "laranja-branca": { label: "FAIXA LARANJA E BRANCA", type: "dual", base: "#fb7d21", stripe: "#ffffff", text: "#070707" },
+      "laranja": { label: "FAIXA LARANJA", type: "single", main: "#fb7d21", text: "#070707" },
+      "laranja-preta": { label: "FAIXA LARANJA E PRETA", type: "dual", base: "#fb7d21", stripe: "#050505", text: "#ffffff" },
+      "verde-branca": { label: "FAIXA VERDE E BRANCA", type: "dual", base: "#16a34a", stripe: "#ffffff", text: "#070707" },
+      "verde": { label: "FAIXA VERDE", type: "single", main: "#16a34a", text: "#ffffff" },
+      "verde-preta": { label: "FAIXA VERDE E PRETA", type: "dual", base: "#16a34a", stripe: "#050505", text: "#ffffff" },
+      "azul": { label: "FAIXA AZUL", type: "single", main: "#2563eb", text: "#ffffff" },
+      "roxa": { label: "FAIXA ROXA", type: "single", main: "#7e22ce", text: "#ffffff" },
+      "marrom": { label: "FAIXA MARROM", type: "single", main: "#7c2d12", text: "#ffffff" },
+      "preta": { label: "FAIXA PRETA", type: "single", main: "#050505", tarja: "#dc2626", text: "#ffffff", degree: 0 },
+      "preta-1-grau": { label: "FAIXA PRETA 1º GRAU", type: "single", main: "#050505", tarja: "#dc2626", text: "#ffffff", degree: 1 },
+      "preta-2-grau": { label: "FAIXA PRETA 2º GRAU", type: "single", main: "#050505", tarja: "#dc2626", text: "#ffffff", degree: 2 },
+      "preta-3-grau": { label: "FAIXA PRETA 3º GRAU", type: "single", main: "#050505", tarja: "#dc2626", text: "#ffffff", degree: 3 },
+      "preta-4-grau": { label: "FAIXA PRETA 4º GRAU", type: "single", main: "#050505", tarja: "#dc2626", text: "#ffffff", degree: 4 }
+    };
+
+    function escapeHtml(value) {
+      return String(value || "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function upper(value, fallback) {
+      const clean = String(value || "").trim();
+      return (clean || fallback).toLocaleUpperCase("pt-BR");
+    }
+
+    function formatDate(value) {
+      if (!value) return "Data da certificação.";
+      const [year, month, day] = value.split("-").map(Number);
+      const date = new Date(year, month - 1, day);
+      const formatted = new Intl.DateTimeFormat("pt-BR", {
+        day: "numeric",
+        month: "long",
+        year: "numeric"
+      }).format(date);
+      return formatted.charAt(0).toUpperCase() + formatted.slice(1) + ".";
+    }
+
+    function isPlaceholderConfig() {
+      const cfg = window.firebaseConfig || {};
+      return !cfg.apiKey || String(cfg.apiKey).includes("COLE_AQUI") || String(cfg.projectId || "").includes("COLE_AQUI");
+    }
+
+    function roleLabel(role) {
+      return ({ professor: "Professor", lider: "Líder", admin: "Admin" })[role] || "Usuário";
+    }
+
+    function canApprove() {
+      return state.profile && ["lider", "admin"].includes(state.profile.role);
+    }
+
+    function isAdmin() {
+      return state.profile && state.profile.role === "admin";
+    }
+
+    function currentBelt() {
+      return beltMap[$("#belt").value] || beltMap.amarela;
+    }
+
+    function isBlackBeltKey(key) {
+      return String(key || "").startsWith("preta");
+    }
+
+    function setStatus(message) {
+      const el = $("#status");
+      if (el) el.textContent = message || "";
+    }
+
+    function setAuthStatus(message) {
+      const el = $("#authStatus");
+      if (el) el.textContent = message || "";
+    }
+
+    function makeAuthCode() {
+      const year = new Date().getFullYear();
+      const random = Math.random().toString(36).slice(2, 8).toUpperCase();
+      return `EXT-${year}-${random}`;
+    }
+
+    function validationUrl(code) {
+      const base = `${window.location.origin}${window.location.pathname}`;
+      return `${base}?validar=${encodeURIComponent(code)}`;
+    }
+
+    function formSnapshot() {
+      syncProfessors();
+      updateMainLogo(root);
+      return JSON.stringify({
+        student: $("#student").value.trim(),
+        beltKey: $("#belt").value,
+        date: $("#date").value,
+        professors: state.professors,
+        notes: $("#notes").value.trim()
+      });
+    }
+
+    function formPayload(status = "approved") {
+      const beltKey = $("#belt").value;
+      const belt = beltMap[beltKey] || beltMap.amarela;
+      const profile = state.profile || {};
+      return {
+        student: $("#student").value.trim(),
+        studentUpper: upper($("#student").value, "NOME DO ATLETA"),
+        beltKey,
+        beltLabel: belt.label,
+        date: $("#date").value,
+        professors: state.professors.map(p => ({ name: String(p.name || "").trim(), role: String(p.role || "").trim() })).filter(p => p.name),
+        notes: $("#notes").value.trim(),
+        unit: profile.unit || (window.extremoConfig && window.extremoConfig.unidadePadrao) || "Extremo Norte",
+        issuerEmail: state.user ? state.user.email : "",
+        issuerName: profile.name || (state.user ? state.user.displayName || state.user.email : ""),
+        issuerRole: profile.role || "professor",
+        status,
+        requiresApproval: isBlackBeltKey(beltKey),
+        snapshot: formSnapshot()
+      };
+    }
+
+    function renderProfessorFields() {
+      const list = $("#professorList");
+      list.innerHTML = "";
+
+      state.professors.forEach((prof, index) => {
+        const card = document.createElement("div");
+        card.className = "prof-card";
+        card.innerHTML = `
+          <div class="prof-top">
+            <span>Professor ${index + 1}</span>
+            ${state.professors.length > 1 ? `<button class="remove-prof" type="button" data-remove="${index}" aria-label="Remover professor">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 15H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+            </button>` : ""}
+          </div>
+          <div class="field">
+            <label for="profName${index}">Nome do professor</label>
+            <input id="profName${index}" data-prof-name="${index}" type="text" value="${escapeHtml(prof.name)}" autocomplete="off">
+          </div>
+          <div class="field" style="margin-bottom:0">
+            <label for="profRole${index}">Faixa</label>
+            <input id="profRole${index}" data-prof-role="${index}" type="text" value="${escapeHtml(prof.role)}" autocomplete="off">
+          </div>
+        `;
+        list.appendChild(card);
+      });
+    }
+
+    function syncProfessors() {
+      $$('[data-prof-name]').forEach(input => {
+        const index = Number(input.dataset.profName);
+        if (state.professors[index]) state.professors[index].name = input.value;
+      });
+
+      $$('[data-prof-role]').forEach(input => {
+        const index = Number(input.dataset.profRole);
+        if (state.professors[index]) state.professors[index].role = input.value;
+      });
+    }
+
+    function fitText(el, minPx = 14) {
+      if (!el) return;
+      el.style.fontSize = "";
+      let size = parseFloat(getComputedStyle(el).fontSize);
+      const maxWidth = el.clientWidth;
+      let safe = 0;
+      while (el.scrollWidth > maxWidth && size > minPx && safe < 90) {
+        size -= 1;
+        el.style.fontSize = size + "px";
+        safe++;
+      }
+    }
+
+    function fitAll(root = document) {
+      requestAnimationFrame(() => {
+        $$(".fit-text", root).forEach(el => fitText(el, 17));
+      });
+    }
+
+    function renderBeltSvg(root, belt) {
+      const svg = $("#beltSvg", root);
+      if (!svg) return;
+
+      if (belt.type === "dual") {
+        const base = belt.base || "#ffcc00";
+        const stripe = belt.stripe || "#ffffff";
+        svg.innerHTML = `
+          <defs>
+            <linearGradient id="beltShade" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%" stop-color="#ffffff" stop-opacity="0.16"/>
+              <stop offset="50%" stop-color="#ffffff" stop-opacity="0"/>
+              <stop offset="100%" stop-color="#000000" stop-opacity="0.08"/>
+            </linearGradient>
+          </defs>
+          <rect x="8" y="6" width="984" height="68" fill="${base}" stroke="#4d4d4d" stroke-width="3" />
+          <rect x="8" y="30" width="984" height="20" fill="${stripe}" />
+          <rect x="8" y="6" width="984" height="68" fill="url(#beltShade)" />
+          <line x1="22" y1="12" x2="978" y2="12" stroke="rgba(0,0,0,.22)" stroke-width="1.6" stroke-dasharray="6 6" />
+          <line x1="22" y1="68" x2="978" y2="68" stroke="rgba(0,0,0,.22)" stroke-width="1.6" stroke-dasharray="6 6" />
+        `;
+      } else {
+        const main = belt.main || "#ffcc00";
+        const tarja = belt.tarja || "#0b0b0b";
+        const degree = Number(belt.degree || 0);
+        const isBlackBelt = tarja.toLowerCase() === "#dc2626";
+
+        let stripesMarkup = "";
+        if (isBlackBelt && degree > 0) {
+          const tarjaStart = 59;
+          const stripeWidth = 12;
+          const stripeGap = 12;
+          const leftPadding = 14;
+          const firstDegreeX = tarjaStart + leftPadding;
+
+          for (let i = 0; i < degree; i++) {
+            const x = firstDegreeX + i * (stripeWidth + stripeGap);
+            stripesMarkup += `<rect x="${x.toFixed(2)}" y="0" width="${stripeWidth}" height="80" fill="#ffffff" />`;
+          }
+        }
+
+        svg.innerHTML = `
+          <defs>
+            <linearGradient id="beltShade" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%" stop-color="#ffffff" stop-opacity="0.28"/>
+              <stop offset="52%" stop-color="#ffffff" stop-opacity="0"/>
+              <stop offset="100%" stop-color="#000000" stop-opacity="0.08"/>
+            </linearGradient>
+          </defs>
+          <rect x="0" y="0" width="59" height="80" fill="${main}"></rect>
+          <rect x="59" y="0" width="137" height="80" fill="${tarja}"></rect>
+          ${stripesMarkup}
+          <rect x="196" y="0" width="804" height="80" fill="${main}"></rect>
+          <rect x="0" y="0" width="1000" height="80" fill="url(#beltShade)" />
+        `;
+      }
+    }
+
+    function renderQRCode(target, code) {
+      if (!target) return;
+      target.innerHTML = "";
+      if (!code) return;
+      const url = validationUrl(code);
+      const holder = document.createElement("div");
+      if (window.QRCode) {
+        new QRCode(holder, { text: url, width: 128, height: 128, correctLevel: QRCode.CorrectLevel.M });
+        const canvas = holder.querySelector("canvas");
+        const img = holder.querySelector("img");
+        const src = canvas ? canvas.toDataURL("image/png") : (img ? img.src : "");
+        if (src) {
+          const out = new Image();
+          out.alt = "QR Code de validação";
+          out.src = src;
+          target.appendChild(out);
+          return;
+        }
+      }
+      const fallback = new Image();
+      fallback.alt = "QR Code de validação";
+      fallback.src = `https://api.qrserver.com/v1/create-qr-code/?size=128x128&data=${encodeURIComponent(url)}`;
+      target.appendChild(fallback);
+    }
+
+    function updateAuthStamp(root = document) {
+      const cert = state.activeCertificate;
+      const stamp = $("#authStamp", root);
+      const codeEl = $("#authCodePreview", root);
+      const qrBox = $("#qrCodeBox", root);
+      const certificate = $("#certificate", root);
+      if (!stamp || !codeEl || !qrBox) return;
+
+      const isPending = cert && cert.status === "pending";
+      if (certificate) certificate.classList.toggle("pending", !!isPending);
+
+      if (cert && cert.status === "approved" && cert.authCode) {
+        stamp.classList.remove("hidden");
+        codeEl.innerHTML = `Código<br><strong>${escapeHtml(cert.authCode)}</strong>`;
+        renderQRCode(qrBox, cert.authCode);
+      } else {
+        stamp.classList.add("hidden");
+        codeEl.textContent = "";
+        qrBox.innerHTML = "";
+      }
+    }
+
+    function updatePreview(root = document) {
+      syncProfessors();
+      $("#studentPreview", root).textContent = upper($("#student").value, "NOME DO ATLETA");
+
+      const belt = currentBelt();
+      if (belt.main) $("#beltBox", root).style.setProperty("--belt-main", belt.main);
+      $("#beltBox", root).style.setProperty("--belt-text", belt.text);
+      $("#beltPreview", root).textContent = belt.label;
+      renderBeltSvg(root, belt);
+
+      $("#datePreview", root).textContent = formatDate($("#date").value);
+
+      const professors = state.professors
+        .map(prof => ({ name: String(prof.name || "").trim(), role: String(prof.role || "").trim() }))
+        .filter(prof => prof.name);
+
+      const signatureBox = $("#signaturePreview", root);
+      signatureBox.innerHTML = "";
+      signatureBox.className = "signatures";
+      const count = Math.max(1, professors.length);
+      signatureBox.classList.add(count > 4 ? "count-many" : `count-${count}`);
+
+      (professors.length ? professors : [{ name: "Professor responsável", role: "" }]).slice(0, 5).forEach(prof => {
+        const item = document.createElement("div");
+        item.className = "signature";
+        item.innerHTML = `
+          <div class="signature-space"></div>
+          <div class="signature-line"></div>
+          <div class="signature-name">${escapeHtml(prof.name)}</div>
+          <div class="signature-role">${escapeHtml(prof.role || "Professor responsável")}</div>
+        `;
+        signatureBox.appendChild(item);
+      });
+
+      const currentSnapshot = formSnapshot();
+      if (state.activeCertificate && state.activeCertificate.snapshot && state.activeCertificate.snapshot !== currentSnapshot) {
+        state.activeCertificate = null;
+      }
+      updateAuthStamp(root);
+      updatePdfButtonText();
+      fitAll(root);
+    }
+
+    async function waitForImages(root) {
+      const imgs = $$("img", root);
+      await Promise.all(imgs.map(img => {
+        if (img.complete && img.naturalWidth) return Promise.resolve();
+        return new Promise(resolve => {
+          img.onload = resolve;
+          img.onerror = resolve;
+        });
+      }));
+    }
+
+    function slug(value) {
+      return String(value || "certificado")
+        .trim()
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "") || "certificado";
+    }
+
+    function makeExportClone() {
+      const host = document.createElement("div");
+      host.style.position = "fixed";
+      host.style.left = "-10000px";
+      host.style.top = "0";
+      host.style.width = "1122px";
+      host.style.height = "794px";
+      host.style.background = "#fff";
+      host.style.zIndex = "-1";
+
+      const clone = $("#certificate").cloneNode(true);
+      clone.id = "certificate-export";
+      clone.style.width = "1122px";
+      clone.style.height = "794px";
+      clone.style.minWidth = "0";
+      clone.style.borderRadius = "0";
+
+      host.appendChild(clone);
+      document.body.appendChild(host);
+      updatePreview(host);
+      updateAuthStamp(host);
+
+      return { host, clone };
+    }
+
+    function printCertificateNow() {
+      updatePreview();
+      window.print();
+    }
+
+    async function generatePDF(event) {
+      if (event && typeof event.preventDefault === "function") event.preventDefault();
+      const status = $("#status");
+      status.textContent = "Preparando PDF oficial...";
+
+      if (!state.activeCertificate || state.activeCertificate.status !== "approved" || !state.activeCertificate.authCode) {
+        status.textContent = "Este certificado ainda não tem aprovação/autenticação oficial.";
+        return;
+      }
+
+      updateAuthStamp();
+      if (!window.html2pdf) {
+        status.textContent = "Gerador automático indisponível. Abrindo a janela de impressão para salvar em PDF.";
+        printCertificateNow();
+        return;
+      }
+
+      const { host, clone } = makeExportClone();
+      try {
+        await document.fonts.ready;
+        await waitForImages(clone);
+        fitAll(host);
+        await new Promise(resolve => setTimeout(resolve, 220));
+
+        await html2pdf()
+          .set({
+            margin: 0,
+            filename: `certificado-${slug($("#student").value)}-${state.activeCertificate.authCode}.pdf`,
+            image: { type: "jpeg", quality: 1 },
+            html2canvas: {
+              scale: 3,
+              useCORS: true,
+              allowTaint: true,
+              backgroundColor: "#ffffff",
+              scrollX: 0,
+              scrollY: 0,
+              width: 1122,
+              height: 794,
+              windowWidth: 1122,
+              windowHeight: 794
+            },
+            jsPDF: { unit: "mm", format: "a4", orientation: "landscape" },
+            pagebreak: { mode: ["avoid-all"] }
+          })
+          .from(clone)
+          .save();
+
+        status.textContent = `PDF gerado com autenticação ${state.activeCertificate.authCode}.`;
+      } catch (error) {
+        console.error(error);
+        status.textContent = "A geração automática falhou. Abrindo a janela de impressão para salvar em PDF.";
+        printCertificateNow();
+      } finally {
+        host.remove();
+      }
+    }
+
+    async function saveApprovedCertificate() {
+      if (!state.firebaseReady) throw new Error("Firebase não configurado.");
+      const authCode = makeAuthCode();
+      const payload = formPayload("approved");
+      const data = {
+        ...payload,
+        authCode,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        approvedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        approvedByEmail: state.user.email,
+        approvedByName: state.profile.name || state.user.email
+      };
+      const ref = await state.db.collection("certificates").add(data);
+      await state.db.collection("publicCertificates").doc(authCode).set({
+        authCode,
+        student: data.student,
+        beltLabel: data.beltLabel,
+        date: data.date,
+        professors: data.professors,
+        unit: data.unit,
+        issuerEmail: data.issuerEmail,
+        issuerName: data.issuerName,
+        approvedByName: data.approvedByName,
+        status: "valid",
+        issuedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      state.activeCertificate = { id: ref.id, ...data, createdAt: new Date(), approvedAt: new Date() };
+      updateAuthStamp();
+      await loadHistory();
+      return state.activeCertificate;
+    }
+
+    async function submitForApproval() {
+      if (!state.firebaseReady) throw new Error("Firebase não configurado.");
+      const payload = formPayload("pending");
+      const data = {
+        ...payload,
+        authCode: "",
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        requestedAt: firebase.firestore.FieldValue.serverTimestamp()
+      };
+      const ref = await state.db.collection("certificates").add(data);
+      state.activeCertificate = { id: ref.id, ...data, createdAt: new Date() };
+      updateAuthStamp();
+      setStatus("Solicitação de faixa preta enviada para aprovação do líder. O PDF oficial será liberado após aprovação.");
+      await loadHistory();
+      if (canApprove()) await loadPendingApprovals();
+    }
+
+    async function approveCertificate(id) {
+      const ref = state.db.collection("certificates").doc(id);
+      const snap = await ref.get();
+      if (!snap.exists) return;
+      const current = snap.data();
+      const authCode = current.authCode || makeAuthCode();
+      await ref.update({
+        status: "approved",
+        authCode,
+        approvedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        approvedByEmail: state.user.email,
+        approvedByName: state.profile.name || state.user.email
+      });
+      await state.db.collection("publicCertificates").doc(authCode).set({
+        authCode,
+        student: current.student,
+        beltLabel: current.beltLabel,
+        date: current.date,
+        professors: current.professors || [],
+        unit: current.unit || "Extremo Norte",
+        issuerEmail: current.issuerEmail,
+        issuerName: current.issuerName,
+        approvedByName: state.profile.name || state.user.email,
+        status: "valid",
+        issuedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      setStatus(`Certificado aprovado. Código: ${authCode}`);
+      await loadPendingApprovals();
+      await loadHistory();
+    }
+
+    async function rejectCertificate(id) {
+      const reason = prompt("Motivo da recusa/correção:") || "Solicitação recusada pelo líder.";
+      await state.db.collection("certificates").doc(id).update({
+        status: "rejected",
+        rejectedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        rejectedByEmail: state.user.email,
+        rejectedByName: state.profile.name || state.user.email,
+        rejectedReason: reason
+      });
+      await loadPendingApprovals();
+      await loadHistory();
+    }
+
+    async function handleOfficialAction(event) {
+      if (event && typeof event.preventDefault === "function") event.preventDefault();
+      if (!state.firebaseReady) {
+        setStatus("Configure o Firebase em assets/js/firebase-config.js antes de gerar certificados oficiais.");
+        return;
+      }
+      if (!state.user || !state.profile) {
+        setStatus("Entre com um usuário autorizado antes de gerar certificados.");
+        return;
+      }
+
+      updatePreview();
+      const snapshot = formSnapshot();
+      const beltKey = $("#belt").value;
+      const requiresApproval = isBlackBeltKey(beltKey);
+
+      if (state.activeCertificate && state.activeCertificate.status === "approved" && state.activeCertificate.snapshot === snapshot) {
+        await generatePDF(event);
+        return;
+      }
+
+      if (requiresApproval && !canApprove()) {
+        await submitForApproval();
+        return;
+      }
+
+      if (requiresApproval && canApprove()) {
+        const confirmed = confirm("Faixa preta exige aprovação. Como seu perfil é líder/admin, deseja aprovar e gerar agora?");
+        if (!confirmed) {
+          await submitForApproval();
+          return;
+        }
+      }
+
+      await saveApprovedCertificate();
+      await generatePDF(event);
+    }
+
+    function updatePdfButtonText() {
+      const text = $("#pdfButtonText");
+      const lowerButtons = $$(".btn-orange[data-pdf]");
+      const requiresApproval = isBlackBeltKey($("#belt").value);
+      const label = requiresApproval && !canApprove() ? "Enviar para aprovação" : "Gerar PDF";
+      if (text) text.textContent = label;
+      lowerButtons.forEach(btn => {
+        const svg = btn.querySelector("svg");
+        btn.innerHTML = `${svg ? svg.outerHTML : ""}${label}`;
+      });
+    }
+
+    function fillFormFromCertificate(cert) {
+      $("#student").value = cert.student || "";
+      $("#belt").value = cert.beltKey || "amarela";
+      $("#date").value = cert.date || "";
+      $("#notes").value = cert.notes || "";
+      state.professors = Array.isArray(cert.professors) && cert.professors.length ? cert.professors : [{ name: "", role: "" }];
+      renderProfessorFields();
+      state.activeCertificate = cert;
+      updatePreview();
+      $("#previewArea").scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    function formatShortDate(value) {
+      if (!value) return "sem data";
+      if (value.toDate) return value.toDate().toLocaleDateString("pt-BR");
+      if (typeof value === "string") return value;
+      return "sem data";
+    }
+
+    function certCard(cert, id, includeApprovalActions = false) {
+      const statusText = cert.status === "approved" ? "aprovado" : cert.status === "pending" ? "pendente" : "recusado";
+      const canGenerate = cert.status === "approved";
+      return `
+        <div class="workflow-item" data-cert-id="${escapeHtml(id)}">
+          <strong>${escapeHtml(cert.student || "Atleta sem nome")}</strong>
+          <small>${escapeHtml(cert.beltLabel || "")}${cert.unit ? " - " + escapeHtml(cert.unit) : ""}<br>Status: ${statusText}${cert.authCode ? " - Código: " + escapeHtml(cert.authCode) : ""}</small>
+          <div class="workflow-actions">
+            <button class="mini-btn secondary" type="button" data-load-cert="${escapeHtml(id)}">Carregar</button>
+            ${canGenerate ? `<button class="mini-btn" type="button" data-generate-cert="${escapeHtml(id)}">Gerar PDF</button>` : ""}
+            ${includeApprovalActions ? `<button class="mini-btn" type="button" data-approve-cert="${escapeHtml(id)}">Aprovar</button><button class="mini-btn secondary" type="button" data-reject-cert="${escapeHtml(id)}">Recusar</button>` : ""}
+          </div>
+        </div>
+      `;
+    }
+
+    async function fetchCertificate(id) {
+      const snap = await state.db.collection("certificates").doc(id).get();
+      if (!snap.exists) return null;
+      return { id: snap.id, ...snap.data() };
+    }
+
+    async function loadHistory() {
+      const list = $("#historyList");
+      if (!state.firebaseReady || !state.user) {
+        list.textContent = "Histórico indisponível.";
+        return;
+      }
+      list.textContent = "Carregando histórico...";
+      try {
+        let query = state.db.collection("certificates");
+        if (!canApprove()) query = query.where("issuerEmail", "==", state.user.email);
+        const snap = await query.limit(30).get();
+        const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        docs.sort((a, b) => {
+          const ta = a.createdAt && a.createdAt.toMillis ? a.createdAt.toMillis() : 0;
+          const tb = b.createdAt && b.createdAt.toMillis ? b.createdAt.toMillis() : 0;
+          return tb - ta;
+        });
+        list.innerHTML = docs.length ? docs.map(doc => certCard(doc, doc.id, false)).join("") : "Nenhum certificado registrado ainda.";
+      } catch (error) {
+        console.error(error);
+        list.textContent = "Não foi possível carregar o histórico. Confira as regras do Firestore.";
+      }
+    }
+
+    async function loadPendingApprovals() {
+      const panel = $("#pendingPanel");
+      const list = $("#pendingList");
+      if (!canApprove()) {
+        panel.classList.add("hidden");
+        return;
+      }
+      panel.classList.remove("hidden");
+      list.textContent = "Carregando aprovações...";
+      try {
+        const snap = await state.db.collection("certificates").where("status", "==", "pending").limit(50).get();
+        const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        list.innerHTML = docs.length ? docs.map(doc => certCard(doc, doc.id, true)).join("") : "Nenhuma faixa preta pendente.";
+      } catch (error) {
+        console.error(error);
+        list.textContent = "Não foi possível carregar aprovações pendentes.";
+      }
+    }
+
+    async function saveUserProfile() {
+      if (!isAdmin()) {
+        $("#adminStatus").textContent = "Apenas admin pode autorizar usuários.";
+        return;
+      }
+      const email = $("#adminUserEmail").value.trim().toLowerCase();
+      const name = $("#adminUserName").value.trim();
+      const unit = $("#adminUserUnit").value.trim() || "Extremo Norte";
+      const role = $("#adminUserRole").value;
+      if (!email || !name) {
+        $("#adminStatus").textContent = "Informe e-mail e nome.";
+        return;
+      }
+      await state.db.collection("usersByEmail").doc(email).set({ email, name, unit, role, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+      $("#adminStatus").textContent = "Usuário autorizado/atualizado.";
+    }
+
+    function wireWorkflowActions() {
+      document.addEventListener("click", async e => {
+        const load = e.target.closest("[data-load-cert]");
+        const gen = e.target.closest("[data-generate-cert]");
+        const approve = e.target.closest("[data-approve-cert]");
+        const reject = e.target.closest("[data-reject-cert]");
+        try {
+          if (load) {
+            const cert = await fetchCertificate(load.dataset.loadCert);
+            if (cert) fillFormFromCertificate(cert);
+          }
+          if (gen) {
+            const cert = await fetchCertificate(gen.dataset.generateCert);
+            if (cert) {
+              fillFormFromCertificate(cert);
+              await generatePDF(e);
+            }
+          }
+          if (approve) await approveCertificate(approve.dataset.approveCert);
+          if (reject) await rejectCertificate(reject.dataset.rejectCert);
+        } catch (error) {
+          console.error(error);
+          setStatus("Falha na operação. Confira console, login e regras do Firestore.");
+        }
+      });
+    }
+
+    async function initFirebase() {
+      if (isPlaceholderConfig()) {
+        $("#authScreen").classList.remove("hidden");
+        setAuthStatus("Firebase ainda não configurado. Edite public/assets/js/firebase-config.js antes de publicar.");
+        return;
+      }
+      try {
+        firebase.initializeApp(window.firebaseConfig);
+        state.auth = firebase.auth();
+        state.db = firebase.firestore();
+        state.firebaseReady = true;
+      } catch (error) {
+        console.error(error);
+        $("#authScreen").classList.remove("hidden");
+        setAuthStatus("Falha ao iniciar Firebase. Confira firebase-config.js.");
+        return;
+      }
+
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get("validar");
+      if (code) {
+        await runValidation(code);
+        return;
+      }
+
+      state.auth.onAuthStateChanged(async user => {
+        state.user = user;
+        if (!user) {
+          state.profile = null;
+          $("#appRoot").classList.add("hidden");
+          $("#authScreen").classList.remove("hidden");
+          return;
+        }
+        await loadUserProfile(user);
+      });
+    }
+
+    async function loadUserProfile(user) {
+      const email = String(user.email || "").toLowerCase();
+      try {
+        const snap = await state.db.collection("usersByEmail").doc(email).get();
+        if (!snap.exists) {
+          $("#appRoot").classList.add("hidden");
+          $("#authScreen").classList.remove("hidden");
+          setAuthStatus(`Login feito, mas o e-mail ${email} ainda não está autorizado.`);
+          return;
+        }
+        state.profile = snap.data();
+        $("#authScreen").classList.add("hidden");
+        $("#appRoot").classList.remove("hidden");
+        $("#userRoleLabel").textContent = roleLabel(state.profile.role);
+        $("#userNameLabel").textContent = state.profile.name || email;
+        $("#adminPanel").classList.toggle("hidden", !isAdmin());
+        setStatus("Sistema conectado. Certificados gerados serão registrados com código de autenticação.");
+        await loadHistory();
+        await loadPendingApprovals();
+        updatePdfButtonText();
+      } catch (error) {
+        console.error(error);
+        setAuthStatus("Não foi possível carregar o perfil autorizado. Confira Firestore Rules e usersByEmail.");
+      }
+    }
+
+    async function runValidation(code) {
+      $("#authScreen").classList.add("hidden");
+      $("#appRoot").classList.add("hidden");
+      $("#validationScreen").classList.remove("hidden");
+      const result = $("#validationResult");
+      try {
+        const snap = await state.db.collection("publicCertificates").doc(code).get();
+        if (!snap.exists || snap.data().status !== "valid") {
+          result.className = "validation-result invalid";
+          result.textContent = "Certificado não encontrado ou inválido.";
+          return;
+        }
+        const data = snap.data();
+        result.className = "validation-result valid";
+        result.innerHTML = `
+          <strong>Certificado válido</strong>
+          <dl>
+            <div><dt>Atleta</dt><dd>${escapeHtml(data.student)}</dd></div>
+            <div><dt>Graduação</dt><dd>${escapeHtml(data.beltLabel)}</dd></div>
+            <div><dt>Data</dt><dd>${escapeHtml(formatDate(data.date).replace(/\.$/, ""))}</dd></div>
+            <div><dt>Unidade</dt><dd>${escapeHtml(data.unit || "Extremo Norte")}</dd></div>
+            <div><dt>Professor</dt><dd>${escapeHtml((data.professors || []).map(p => p.name).join(", ") || data.issuerName || "")}</dd></div>
+            <div><dt>Código</dt><dd>${escapeHtml(data.authCode)}</dd></div>
+          </dl>
+        `;
+      } catch (error) {
+        console.error(error);
+        result.className = "validation-result invalid";
+        result.textContent = "Não foi possível consultar o certificado. Confira a conexão e a configuração do Firebase.";
+      }
+    }
+
+    function initAuthButtons() {
+      $("#emailLoginBtn").addEventListener("click", async () => {
+        try {
+          setAuthStatus("Entrando...");
+          await state.auth.signInWithEmailAndPassword($("#loginEmail").value.trim().toLowerCase(), $("#loginPassword").value);
+        } catch (error) {
+          console.error(error);
+          setAuthStatus("Falha no login. Confira e-mail e senha.");
+        }
+      });
+
+      $("#createAccountBtn").addEventListener("click", async () => {
+        try {
+          setAuthStatus("Criando conta...");
+          await state.auth.createUserWithEmailAndPassword($("#loginEmail").value.trim().toLowerCase(), $("#loginPassword").value);
+        } catch (error) {
+          console.error(error);
+          setAuthStatus("Não foi possível criar a conta. O e-mail precisa estar autorizado para acessar o sistema.");
+        }
+      });
+
+      $("#googleLoginBtn").addEventListener("click", async () => {
+        try {
+          setAuthStatus("Abrindo login Google...");
+          const provider = new firebase.auth.GoogleAuthProvider();
+          await state.auth.signInWithPopup(provider);
+        } catch (error) {
+          console.error(error);
+          setAuthStatus("Falha no login Google.");
+        }
+      });
+
+      $("#resetPasswordBtn").addEventListener("click", async () => {
+        const email = $("#loginEmail").value.trim().toLowerCase();
+        if (!email) return setAuthStatus("Informe o e-mail para recuperar senha.");
+        await state.auth.sendPasswordResetEmail(email);
+        setAuthStatus("E-mail de recuperação enviado, se a conta existir.");
+      });
+
+      $("#logoutBtn").addEventListener("click", () => state.auth.signOut());
+      $("#saveUserProfileBtn").addEventListener("click", saveUserProfile);
+    }
+
+    function init() {
+      renderProfessorFields();
+      updatePreview();
+      initAuthButtons();
+      wireWorkflowActions();
+
+      ["student", "belt", "date", "mainLogo", "notes"].forEach(id => {
+        const el = $("#" + id);
+        el.addEventListener("input", () => updatePreview());
+        el.addEventListener("change", () => updatePreview());
+      });
+
+      $("#professorList").addEventListener("input", e => {
+        if (e.target.matches("[data-prof-name], [data-prof-role]")) updatePreview();
+      });
+
+      $("#professorList").addEventListener("click", e => {
+        const btn = e.target.closest("[data-remove]");
+        if (!btn) return;
+        const index = Number(btn.dataset.remove);
+        state.professors.splice(index, 1);
+        renderProfessorFields();
+        updatePreview();
+      });
+
+      $("#addProfessor").addEventListener("click", () => {
+        syncProfessors();
+        state.professors.push({ name: "", role: "" });
+        renderProfessorFields();
+        updatePreview();
+        const last = $$('[data-prof-name]').at(-1);
+        if (last) last.focus();
+      });
+
+      $$('[data-preview]').forEach(btn => {
+        btn.addEventListener("click", () => $("#previewArea").scrollIntoView({ behavior: "smooth", block: "start" }));
+      });
+
+      $$('[data-pdf]').forEach(btn => btn.addEventListener("click", handleOfficialAction));
+      window.addEventListener("resize", () => fitAll());
+      initFirebase();
+    }
+
+    init();
+  </script>
+</body>
+</html>

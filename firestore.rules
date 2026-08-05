@@ -1,0 +1,59 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null && request.auth.token.email != null;
+    }
+
+    function userEmail() {
+      return request.auth.token.email;
+    }
+
+    function userDoc() {
+      return /databases/$(database)/documents/usersByEmail/$(userEmail());
+    }
+
+    function authorized() {
+      return signedIn() && exists(userDoc());
+    }
+
+    function profile() {
+      return get(userDoc()).data;
+    }
+
+    function isLeader() {
+      return authorized() && (profile().role == 'lider' || profile().role == 'admin');
+    }
+
+    function isAdmin() {
+      return authorized() && profile().role == 'admin';
+    }
+
+    match /usersByEmail/{email} {
+      allow read: if authorized() && (email == userEmail() || isLeader());
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /certificates/{certId} {
+      allow create: if authorized()
+        && request.resource.data.issuerEmail == userEmail()
+        && request.resource.data.student is string
+        && request.resource.data.beltKey is string;
+
+      allow read: if authorized()
+        && (isLeader() || resource.data.issuerEmail == userEmail());
+
+      allow update: if isLeader();
+      allow delete: if isAdmin();
+    }
+
+    match /publicCertificates/{authCode} {
+      allow read: if true;
+      allow create: if authorized()
+        && request.resource.data.authCode == authCode
+        && request.resource.data.status == 'valid'
+        && (isLeader() || request.resource.data.issuerEmail == userEmail());
+      allow update, delete: if isLeader();
+    }
+  }
+}
